@@ -10,6 +10,7 @@ Interface web moderne pour gérer vos conversations avec différents LLMs (Claud
 
 - **100% Web** - Accessible depuis n'importe quel navigateur
 - **Multi-Provider** - Anthropic Claude API ou Ollama (cloud/local)
+- **Streaming en temps réel** ⚡ - Réponses affichées mot par mot (SSE)
 - **Sessions persistantes** - Sauvegardées automatiquement dans le navigateur
 - **Organisation intelligente** - Workspaces → Projets → Sessions
 - **Backup automatique** - Export/Import + sauvegarde auto avec rotation 7 jours
@@ -242,10 +243,10 @@ Les couleurs sont auto-assignées parmi :
 - [x] Calcul du coût en temps réel (Claude API)
 - [x] Indicateur de statut dynamique
 - [x] Système de backup avec rotation (7 jours)
+- [x] **Streaming SSE des réponses en temps réel** ✨
 
 ### 📋 À venir
 
-- [ ] WebSocket pour streaming des réponses
 - [ ] Recherche dans l'historique
 - [ ] Thème clair
 - [ ] Raccourcis clavier
@@ -253,6 +254,7 @@ Les couleurs sont auto-assignées parmi :
 - [ ] Tags et filtres pour sessions
 - [ ] Support GPT-4 / OpenAI
 - [ ] Historique de révisions par message
+- [ ] Bouton Stop pour interrompre la génération
 
 ## 🤝 Contribution
 

@@ -1,17 +1,18 @@
 import type { NextRequest } from 'next/server';
 
-export const runtime = 'edge'; // Optionnel : utilise Edge Runtime pour de meilleures performances
+export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { apiKey, apiUrl, model, messages } = body;
+    const { apiKey, apiUrl, model, messages, stream = true } = body;
 
     console.log('API Request received:', { 
       hasApiKey: !!apiKey, 
       apiUrl, 
       model, 
-      messagesCount: messages?.length 
+      messagesCount: messages?.length,
+      stream 
     });
 
     if (!apiKey) {
@@ -28,7 +29,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Appel à l'API Claude via le backend
     const claudeUrl = `${apiUrl}/messages`;
     console.log('Calling Claude API:', claudeUrl);
 
@@ -43,13 +43,12 @@ export async function POST(request: NextRequest) {
         model: model || 'claude-3-5-sonnet-20241022',
         max_tokens: 4096,
         messages: messages,
+        stream: stream,
       }),
     });
 
-    const data = await response.json();
-    console.log('Claude API response status:', response.status);
-
     if (!response.ok) {
+      const data = await response.json();
       console.error('Claude API error:', data);
       return Response.json(
         { 
@@ -61,7 +60,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return Response.json(data);
+    // Si streaming désactivé, retourner la réponse complète
+    if (!stream) {
+      const data = await response.json();
+      return Response.json(data);
+    }
+
+    // Streaming SSE : transférer le stream de Claude au client
+    const encoder = new TextEncoder();
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          controller.close();
+          return;
+        }
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            // Transférer les chunks directement au client
+            controller.enqueue(value);
+          }
+        } catch (error) {
+          console.error('Stream error:', error);
+          controller.error(error);
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(readableStream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    });
   } catch (error) {
     console.error('Claude API proxy error:', error);
     return Response.json(

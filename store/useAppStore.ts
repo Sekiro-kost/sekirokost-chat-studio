@@ -20,7 +20,8 @@ interface AppState {
   addWorkspace: (name: string, color: string) => void;
   addProject: (workspaceId: string, name: string, description?: string) => void;
   addSession: (projectId: string, name: string) => void;
-  addMessage: (sessionId: string, message: Omit<Message, 'id' | 'timestamp'>) => void;
+  addMessage: (sessionId: string, message: Omit<Message, 'timestamp'> | Omit<Message, 'id' | 'timestamp'>) => void;
+  updateMessage: (sessionId: string, messageId: string, updates: Partial<Message>) => void;
   updateSessionStatus: (sessionId: string, status: Session['status']) => void;
   updateTokenUsage: (sessionId: string, tokens: { input?: number; output?: number }) => void;
   setCurrentWorkspace: (workspaceId: string | null) => void;
@@ -123,7 +124,7 @@ export const useAppStore = create<AppState>()(
       addMessage: (sessionId, message) => {
         const newMessage: Message = {
           ...message,
-          id: generateId(),
+          id: ('id' in message && message.id) ? message.id : generateId(),
           timestamp: new Date(),
         };
 
@@ -137,6 +138,28 @@ export const useAppStore = create<AppState>()(
                   ? {
                       ...s,
                       messages: [...s.messages, newMessage],
+                      updatedAt: new Date(),
+                    }
+                  : s
+              ),
+            })),
+          })),
+        }));
+      },
+
+      updateMessage: (sessionId, messageId, updates) => {
+        set((state) => ({
+          workspaces: state.workspaces.map((w) => ({
+            ...w,
+            projects: w.projects.map((p) => ({
+              ...p,
+              sessions: p.sessions.map((s) =>
+                s.id === sessionId
+                  ? {
+                      ...s,
+                      messages: s.messages.map((m) =>
+                        m.id === messageId ? { ...m, ...updates } : m
+                      ),
                       updatedAt: new Date(),
                     }
                   : s

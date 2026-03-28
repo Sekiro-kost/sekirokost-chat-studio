@@ -4,13 +4,14 @@ export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
-    const { ollamaUrl, model, messages } = await request.json();
+    const { ollamaUrl, model, messages, stream = true } = await request.json();
 
     console.log('Ollama API Request received:', {
       hasOllamaUrl: !!ollamaUrl,
       ollamaUrl,
       model,
       messagesCount: messages?.length,
+      stream,
     });
 
     if (!ollamaUrl) {
@@ -34,11 +35,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // URL de l'API Ollama
     const apiUrl = `${ollamaUrl}/api/chat`;
     console.log('Calling Ollama API:', apiUrl);
 
-    // Appel à l'API Ollama
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
@@ -47,7 +46,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         model,
         messages,
-        stream: false,
+        stream: stream,
       }),
     });
 
@@ -66,15 +65,99 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = await response.json();
+    // Si streaming désactivé, retourner la réponse complète
+    if (!stream) {
+      const data = await response.json();
+      return NextResponse.json({
+        content: [{ text: data.message?.content || '' }],
+        usage: {
+          input_tokens: data.prompt_eval_count || 0,
+          output_tokens: data.eval_count || 0,
+        },
+      });
+    }
+
+    // Streaming : traiter chaque ligne du Stream Ollama et la reformater
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
     
-    // Format de réponse compatible avec notre interface
-    // Ollama retourne { message: { role, content }, ... }
-    return NextResponse.json({
-      content: [{ text: data.message?.content || '' }],
-      usage: {
-        input_tokens: data.prompt_eval_count || 0,
-        output_tokens: data.eval_count || 0,
+    const readableStream = new ReadableStream({
+      async start(controller) {
+        const reader = response.body?.getReader();
+        if (!reader) {
+          controller.close();
+          return;
+        }
+
+        try {
+          let buffer = '';
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            // Décoder le chunk
+            buffer += decoder.decode(value, { stream: true });
+            
+            // Traiter chaque ligne complète
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // Garder la dernière ligne incomplète
+            
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              
+              try {
+                const data = JSON.parse(line);
+                
+                // Ollama format: { message: { content: "..." }, done: false }
+                if (data.message?.content) {
+                  // Reformater au format SSE compatible avec Claude
+                  const sseEvent = {
+                    type: 'content_block_delta',
+                    delta: {
+                      type: 'text_delta',
+                      text: data.message.content,
+                    },
+                  };
+                  
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify(sseEvent)}\n\n`)
+                  );
+                }
+                
+                // Dernier message avec statistiques
+                if (data.done) {
+                  const doneEvent = {
+                    type: 'message_done',
+                    usage: {
+                      input_tokens: data.prompt_eval_count || 0,
+                      output_tokens: data.eval_count || 0,
+                    },
+                  };
+                  
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify(doneEvent)}\n\n`)
+                  );
+                }
+              } catch (e) {
+                console.error('Error parsing Ollama stream line:', e);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Ollama stream error:', error);
+          controller.error(error);
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(readableStream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
       },
     });
 
