@@ -1,6 +1,6 @@
 # SekiroKost Chat Studio 🚀
 
-Une interface web moderne et intuitive pour organiser et gérer toutes vos sessions Claude Code.
+Interface web moderne pour gérer vos conversations avec différents LLMs (Claude API, Ollama).
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black)
@@ -8,32 +8,35 @@ Une interface web moderne et intuitive pour organiser et gérer toutes vos sessi
 
 ## ✨ Features
 
-- **100% Web** - Accessible depuis n'importe quel navigateur, n'importe où
-- **Multi-Provider** - Anthropic Claude API ou Ollama (LLMs locaux gratuits)
-- **Sessions persistantes** - Les sessions continuent à tourner même quand vous fermez le navigateur
-- **Organisation intelligente** - Organisez vos sessions par workspaces et projets
-- **Textarea flottante** - Saisissez vos prompts pendant que vous scrollez les réponses de Claude
-- **Notifications visuelles** - Flash à l'écran et point vert dans le menu quand Claude a terminé
-- **Suivi des tokens** - Monitoring en temps réel de la consommation de tokens (input/output/total)
-- **Calcul des coûts** - Estimation des coûts pour l'API Claude
-- **Interface moderne** - Design sombre et minimaliste avec Tailwind CSS
-- **Gestion d'état performante** - Utilise Zustand avec persistence locale
+- **100% Web** - Accessible depuis n'importe quel navigateur
+- **Multi-Provider** - Anthropic Claude API ou Ollama (cloud/local)
+- **Sessions persistantes** - Sauvegardées automatiquement dans le navigateur
+- **Organisation intelligente** - Workspaces → Projets → Sessions
+- **Backup automatique** - Export/Import + sauvegarde auto avec rotation 7 jours
+- **Interface adaptive** - Affiche le bon nom de LLM selon le provider
+- **Textarea flottante** - Écrivez pendant que vous scrollez
+- **Notifications visuelles** - Flash + indicateur coloré quand le LLM répond
+- **Suivi des tokens** - Monitoring temps réel (input/output/total)
+- **Calcul des coûts** - Estimation pour Claude API
+- **Design moderne** - Tailwind CSS, animations fluides
+- **Gestion d'état** - Zustand avec persistence localStorage
 
 ## 🎯 Technologies
 
 - **Framework** : Next.js 14 (App Router)
 - **Language** : TypeScript
 - **Styling** : Tailwind CSS
-- **State Management** : Zustand avec persistence
+- **State Management** : Zustand avec persistence localStorage
 - **Icons** : Lucide React
-- **Temps réel** : Socket.io (prêt pour intégration)
+- **Backend** : Edge Runtime API Routes
+- **LLMs** : Claude API + Ollama (cloud & local)
 
 ## 🚀 Installation
 
 ```bash
 # Cloner le repository
-git clone https://github.com/julien/claude-interface.git
-cd claude-interface
+git clone https://github.com/VOTRE_USERNAME/sekirokost-chat-studio.git
+cd sekirokost-chat-studio
 
 # Installer les dépendances
 npm install
@@ -46,45 +49,84 @@ Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 
 ## 📖 Utilisation
 
-### 1. Créer un Workspace
+### 1. Choisir votre LLM
 
-Cliquez sur "Nouveau workspace" dans la sidebar et donnez-lui un nom. Chaque workspace a une couleur unique.
+Allez dans **Paramètres** ⚙️ et choisissez :
+- **Anthropic API** : Claude officiel (payant, excellent)
+- **Ollama** : Gratuit (cloud rapide ou local privé)
 
-### 2. Ajouter un Projet
+### 2. Créer un Workspace
+
+Cliquez sur "Nouveau workspace" dans la sidebar. Chaque workspace a une couleur unique.
+
+### 3. Ajouter un Projet
 
 Survolez un workspace et cliquez sur l'icône "+" pour ajouter un projet.
 
-### 3. Créer une Session
+### 4. Créer une Session
 
 Survolez un projet et cliquez sur l'icône "+" pour créer une nouvelle session de chat.
 
-### 4. Discuter avec Claude
+### 5. Discuter
 
 - Sélectionnez une session
 - Tapez votre message dans la textarea en bas
-- Appuyez sur Entrée pour envoyer (Shift+Entrée pour une nouvelle ligne)
-- Le point vert devient jaune pendant le traitement
-- Un flash apparaît quand Claude a terminé
+- Appuyez sur **Entrée** pour envoyer (Shift+Entrée pour nouvelle ligne)
+- L'indicateur montre le statut : vert (prêt), jaune (traitement)
+- Flash visuel quand le LLM a terminé
+
+## 💾 Sauvegarde & Backup
+
+L'interface dispose d'un **système de backup complet** :
+
+### Export/Import Manuel
+
+1. **Paramètres** → Section "Sauvegarde & Export"
+2. **Exporter** : Télécharge un JSON avec toutes vos données
+3. **Importer** : Restaure depuis un fichier JSON
+
+### Backup Automatique
+
+- Configurez le dossier de sauvegarde
+- Cliquez sur "Backup" pour créer une sauvegarde
+- **Rotation automatique** : garde les 7 derniers jours
+- Liste des backups avec suppression individuelle
+
+> 📖 Guide complet : [BACKUP.md](BACKUP.md)
 
 ## 🏗️ Structure du Projet
 
 ```
-claude-interface/
-├── app/                    # Next.js App Router
-│   ├── layout.tsx         # Layout principal
-│   ├── page.tsx           # Page d'accueil
-│   └── globals.css        # Styles globaux
-├── components/            # Composants React
-│   ├── Sidebar.tsx        # Navigation et organisation
-│   ├── ChatView.tsx       # Interface de chat
-│   ├── StatusIndicator.tsx # Indicateur d'état
-│   └── TokenCounter.tsx   # Compteur de tokens
-├── store/                 # Gestion d'état
-│   └── useAppStore.ts     # Store Zustand principal
-├── types/                 # Définitions TypeScript
-│   └── index.ts           # Types globaux
-└── lib/                   # Utilitaires
-    └── utils.ts           # Fonctions helper
+sekirokost-chat-studio/
+├── app/                      # Next.js App Router
+│   ├── api/                  # API Routes
+│   │   ├── claude/          # Proxy Claude API
+│   │   ├── ollama/          # Proxy Ollama
+│   │   └── backup/          # Système de backup
+│   ├── layout.tsx           # Layout principal
+│   ├── page.tsx             # Page d'accueil
+│   └── globals.css          # Styles globaux
+├── components/              # Composants React
+│   ├── Sidebar.tsx          # Navigation et organisation
+│   ├── ChatView.tsx         # Interface de chat
+│   ├── StatusIndicator.tsx  # Indicateur d'état LLM
+│   ├── TokenCounter.tsx     # Compteur de tokens + coût
+│   ├── SettingsPanel.tsx    # Configuration & Backup
+│   ├── WelcomeScreen.tsx    # Écran d'accueil
+│   └── HelpPanel.tsx        # Panneau d'aide
+├── store/                   # Gestion d'état
+│   └── useAppStore.ts       # Store Zustand avec persistence
+├── hooks/                   # React Hooks
+│   └── useClaude.ts         # Hook multi-provider
+├── lib/                     # Utilitaires
+│   ├── utils.ts             # Helpers (pricing, etc.)
+│   ├── ollama.ts            # Config modèles Ollama
+│   ├── backup.ts            # Export/Import/Backup
+│   └── demo.ts              # Données de démo
+├── types/                   # Définitions TypeScript
+│   └── index.ts             # Types globaux
+└── scripts/                 # Scripts utilitaires
+    └── auto-backup.js       # Script backup automatique
 ```
 
 ## 🔧 Configuration
@@ -191,15 +233,26 @@ Les couleurs sont auto-assignées parmi :
 
 ## 🚧 Roadmap
 
-- [ ] Intégration API Claude réelle
+### ✅ Fonctionnalités implémentées
+
+- [x] Intégration API Claude réelle
+- [x] Support multi-provider (Anthropic + Ollama)
+- [x] 8 modèles Ollama (6 cloud, 2 local)
+- [x] Export/Import/Auto-backup de sessions
+- [x] Calcul du coût en temps réel (Claude API)
+- [x] Indicateur de statut dynamique
+- [x] Système de backup avec rotation (7 jours)
+
+### 📋 À venir
+
 - [ ] WebSocket pour streaming des réponses
-- [ ] Export/Import de sessions
 - [ ] Recherche dans l'historique
 - [ ] Thème clair
 - [ ] Raccourcis clavier
-- [ ] Multi-utilisateurs
-- [ ] Statistiques détaillées
-- [ ] Tags et filtres
+- [ ] Statistiques détaillées (graphiques)
+- [ ] Tags et filtres pour sessions
+- [ ] Support GPT-4 / OpenAI
+- [ ] Historique de révisions par message
 
 ## 🤝 Contribution
 
@@ -222,13 +275,13 @@ Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 - [Zustand](https://github.com/pmndrs/zustand)
 - [Lucide Icons](https://lucide.dev/)
 - [Anthropic Claude](https://www.anthropic.com/)
+- [Ollama](https://ollama.com/) - Pour l'accès aux modèles locaux et cloud
 
 ## 📧 Contact
 
 Julien - [@julien](https://github.com/julien)
 
-Project Link: [https://github.com/julien/claude-interface](https://github.com/julien/claude-interface)
-
+Project Link: [https://github.com/julien/sekirokost-chat-studio]
 ---
 
 ⭐ N'oubliez pas de star le projet si vous le trouvez utile !
